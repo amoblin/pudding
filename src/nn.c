@@ -16,7 +16,7 @@ int usage(char *argv[])
     return 0;
 }
 
-int train_bp(Matrix* w1, Matrix* w2, double (*in)[IN_NODES], double (*out)[OUT_NODES], FILE* matrix_fp, FILE* plot_fp, int data_size) {
+int train_bp(Matrix* w1, Matrix* w2, double (*in)[IN_NODES], double (*out)[OUT_NODES], FILE* matrix_fp, FILE* plot_fp, int data_size, int loop_num) {
     /* 初始化矩阵 \*/
     /* n1 = w1 . a0 \*/
     double *n1 = (double *) malloc( sizeof(double) * w1->m);
@@ -73,8 +73,8 @@ int train_bp(Matrix* w1, Matrix* w2, double (*in)[IN_NODES], double (*out)[OUT_N
     double old_e = 9999;
     double e = PRECISION + 1;
     int n;
-    syslog(LOG_DEBUG, "trainning times: %d\n", LOOP_MAX);
-    for (n = 0; e > PRECISION && n < LOOP_MAX; n++) {
+    syslog(LOG_DEBUG, "trainning times: %d\n", loop_num);
+    for (n = 0; e > PRECISION && n < loop_num; n++) {
         e = 0;
         int i;
         for (i = 0; i < data_size; i++) {
@@ -168,6 +168,7 @@ int main(int argc, char* argv[])
     char plot_file[128];
     FILE *matrix_fp = NULL;
     FILE *plot_fp = NULL;
+    int loop_num;
 
     /* 记录日志 */
     int logfd = open( "nn.log", O_RDWR | O_CREAT | O_APPEND, 0644 );
@@ -181,7 +182,7 @@ int main(int argc, char* argv[])
     int ch;
     int flag=0;
     do {
-        ch = getopt(argc, argv, "i:o:g:h");
+        ch = getopt(argc, argv, "i:o:g:n:h");
         switch(ch) {
             case 'i':
                 strncpy(in_file, optarg, sizeof(in_file) -1 );
@@ -198,12 +199,16 @@ int main(int argc, char* argv[])
             case 'h':
                 usage(argv);
                 break;
+            case 'n':
+                loop_num = atoi(optarg);
+                flag++;
+                break;
             case '?':
             default:
                 break;
         }
     } while( -1 != ch);
-    if(3 > flag) {
+    if(4 > flag) {
         usage(argv);
         return 0;
     }
@@ -273,7 +278,7 @@ int main(int argc, char* argv[])
 
     /* 训练 */
     syslog(LOG_INFO, "Start tranning...");
-    train_bp(w1, w2, in, out, matrix_fp, plot_fp, data_size);
+    train_bp(w1, w2, in, out, matrix_fp, plot_fp, data_size, loop_num);
     fclose(matrix_fp);
     fclose(plot_fp);
     closelog();

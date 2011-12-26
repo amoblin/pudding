@@ -34,63 +34,7 @@ void use_nn(Matrix *w1, Matrix *w2, double (*in)[IN_NODES], double (*out)[OUT_NO
     }
 }
 
-int main(int argc, char *argv[])
-{
-    /* 日志输出 */
-    int logfd = open("pudding.log", O_RDWR|O_CREAT|O_APPEND, 0644);
-    if(-1 == logfd) {
-        return -1;
-    }
-    close(STDERR_FILENO);
-    /* 重定向到logfd */
-    dup2(logfd, STDERR_FILENO);
-    close(logfd);
-    openlog(NULL, LOG_PERROR, LOG_DAEMON);
-
-    /* 参数处理 */
-    unsigned char sentence[UTF8_LEN];
-    char weight_file[128];
-    char ch;
-    int flag = 0;
-    do {
-        ch = getopt(argc, argv, "l:s:h");
-        switch(ch) {
-            case 'l':
-                strncpy(weight_file, optarg, sizeof(weight_file) - 1);
-                syslog(LOG_INFO, "load weight matrix: %s", weight_file);
-                flag++;
-                break;
-            case 's':
-                strncpy(sentence, optarg, sizeof(sentence) - 1);
-                syslog(LOG_INFO, "load sentence: %s", sentence);
-                flag++;
-                break;
-            case 'h':
-                usage(argv);
-                break;
-            default:
-                break;
-        }
-    } while(-1 != ch);
-    if( 2 > flag) {
-        usage(argv);
-        return 0;
-    }
-
-   /* 初始化各层权值矩阵 */
-    Matrix *w1 = matrix_init(HIDDEN_NODES, IN_NODES);
-    Matrix *w2 = matrix_init(OUT_NODES, HIDDEN_NODES);
-
-    FILE *matrix_fp = NULL;
-    matrix_fp = fopen(weight_file, "rb");
-    if (NULL == matrix_fp) {
-        printf("Error! %s does not exist.\n", weight_file);
-        exit(0);
-    }
-    fread(w1->matrix, sizeof(double), w1->m * w1->n, matrix_fp);
-    fread(w2->matrix, sizeof(double), w2->m * w2->n, matrix_fp);
-    fclose(matrix_fp);
-
+void pudding(Matrix *w1, Matrix *w2, char *sentence) {
     /* 整句utf8转unicode */
     char tmp_in[UNI_LEN];
     char tmp_out[SEN_LEN];
@@ -174,6 +118,85 @@ int main(int argc, char *argv[])
         i = i + len;
     }
     printf("\n");
+}
+int main(int argc, char *argv[])
+{
+    /* 日志输出 */
+    int logfd = open("pudding.log", O_RDWR|O_CREAT|O_APPEND, 0644);
+    if(-1 == logfd) {
+        return -1;
+    }
+    close(STDERR_FILENO);
+    /* 重定向到logfd */
+    dup2(logfd, STDERR_FILENO);
+    close(logfd);
+    openlog(NULL, LOG_PERROR, LOG_DAEMON);
 
+    /* 参数处理 */
+    unsigned char sentence[UTF8_LEN];
+    char weight_file[128] = {0};
+    char sen_file[128] = {0};
+    char ch;
+    int flag = 0;
+    do {
+        ch = getopt(argc, argv, "l:s:f:h");
+        switch(ch) {
+            case 'l':
+                strncpy(weight_file, optarg, sizeof(weight_file) - 1);
+                syslog(LOG_INFO, "load weight matrix: %s", weight_file);
+                flag++;
+                break;
+            case 's':
+                strncpy(sentence, optarg, sizeof(sentence) - 1);
+                syslog(LOG_INFO, "load sentence: %s", sentence);
+                flag+=2;
+                break;
+            case 'f':
+                strncpy(sen_file, optarg, sizeof(sen_file) - 1);
+                syslog(LOG_INFO, "load sentences file: %s", sen_file);
+                flag+=4;
+                break;
+            case 'h':
+                usage(argv);
+                break;
+            default:
+                break;
+        }
+    } while(-1 != ch);
+    if( (flag != 3) && (flag != 5) ) {
+        usage(argv);
+        return 0;
+    }
+
+   /* 初始化各层权值矩阵 */
+    Matrix *w1 = matrix_init(HIDDEN_NODES, IN_NODES);
+    Matrix *w2 = matrix_init(OUT_NODES, HIDDEN_NODES);
+
+    FILE *matrix_fp = NULL;
+    matrix_fp = fopen(weight_file, "rb");
+    if (NULL == matrix_fp) {
+        printf("Error! %s does not exist.\n", weight_file);
+        exit(0);
+    }
+    fread(w1->matrix, sizeof(double), w1->m * w1->n, matrix_fp);
+    fread(w2->matrix, sizeof(double), w2->m * w2->n, matrix_fp);
+    fclose(matrix_fp);
+
+    /* 处理单个句子 */
+    if( flag == 3) {
+        pudding(w1, w2, sentence);
+        return 0;
+    }
+
+    /* 处理文本 */
+    FILE *sen_fp = fopen(sen_file, "r");
+    if ( NULL == sen_fp ) {
+        printf(" Error! %s does not exist.\n", sen_file);
+        exit(0);
+    }
+    char sen_buffer[1024];
+    while( fgets(sen_buffer, 1024, sen_fp) != NULL ) {
+        pudding(w1, w2, sen_buffer);
+    }
     return 0;
 }
