@@ -43,3 +43,10 @@ get:
 
 html:
 	rst2html doc/paper.rst doc/paper.html
+	
+data:
+	./rand.py data/dict.txt > /tmp/x
+	head -100 /tmp/x > data/train.txt
+	tail -75 /tmp/x > data/test_label.txt
+	cp data/test_label.txt data/test.txt
+

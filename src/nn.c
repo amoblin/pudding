@@ -114,6 +114,10 @@ int train_bp(Matrix* w1, Matrix* w2, double (*in)[IN_NODES], double (*out)[OUT_N
             old_e = e * 1.1;
         } else {
             alpha = alpha - 0.01;
+            if (alpha <= 0 ) {
+                printf("alpha is too small. Please try again.\n");
+                break;
+            }
             syslog(LOG_INFO, "alpha change: %f", alpha);
             matrix_copy(w1_old, w1);
             matrix_copy(w2_old, w2);
@@ -140,6 +144,7 @@ int train_bp(Matrix* w1, Matrix* w2, double (*in)[IN_NODES], double (*out)[OUT_N
         /* 保存图像数据 */
         if( n % PLOT_DEN == 0) {
             fprintf(plot_fp, "%d %2.1f %2.1f\n", n/PLOT_DEN, e, alpha);
+            fflush(plot_fp);
         }
     }
     /* 释放矩阵内存 */
@@ -270,7 +275,7 @@ int main(int argc, char* argv[])
     */
 
     /* 保存数据点 */
-    plot_fp = fopen(plot_file, "w+");
+    plot_fp = fopen(plot_file, "a+");
     if (plot_fp == NULL) {
         syslog(LOG_ERR, "创建坐标数据文件失败");
         exit(0);

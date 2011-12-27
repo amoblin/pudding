@@ -22,8 +22,8 @@
 #define DEBUG 1
 
 /* 最大循环次数 */
-#define LOG_DEN 10
+#define LOG_DEN 100
 #define LEARN_RATE  1.9
 #define PRECISION 0.1
-#define PLOT_DEN 10
+#define PLOT_DEN 100
 
